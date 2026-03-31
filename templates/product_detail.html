@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Product</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body class="bg-light">
+
+<div class="container mt-4">
+
+    <div class="card p-4">
+        <h2>{{ product.product_name }}</h2>
+        <p>{{ product.category }}</p>
+        <h4>₹{{ product.price }}</h4>
+
+        <form action="/buy/{{ product.product_id }}" method="POST">
+            <button class="btn btn-warning">Buy Now</button>
+        </form>
+    </div>
+
+    <hr>
+
+    <h3>Reviews</h3>
+
+    {% for r in reviews %}
+    <div class="card p-2 mt-2">
+        <p>{{ r.review_text }}</p>
+        <p>Rating: {{ r.rating }}</p>
+        <small>Trust: {{ r.trust_score }}</small>
+    </div>
+    {% endfor %}
+
+</div>
+
+</body>
+</html>
