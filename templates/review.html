@@ -1,28 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Review</title>
+    <title>Submit Review</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .star-btn { cursor: pointer; font-size: 1.8rem; color: #ccc; }
+        .star-btn.selected, .star-btn:hover, .star-btn.hover { color: #ffc107; }
+    </style>
 </head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container">
+        <a class="navbar-brand" href="/">Ecommerce</a>
+        <div class="d-flex align-items-center">
+            {% if user %}
+                <span class="me-3">{{ user.name }}</span>
+                <a href="/logout" class="btn btn-outline-secondary btn-sm">Logout</a>
+            {% else %}
+                <a href="/login" class="btn btn-primary btn-sm">Login</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
 
-<body>
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <h4>Review for {{ product.product_name }}</h4>
+            <p class="text-muted">Order ID: {{ order_id }}</p>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
 
-<h2>Submit Review</h2>
+            <form id="reviewForm" action="/submit_review" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="order_id" value="{{ order_id }}">
+                <input type="hidden" name="rating" id="ratingInput" value="0">
 
-<form action="/submit_review" method="POST">
-    <input type="hidden" name="order_id" value="{{ order_id }}">
+                <div class="mb-3">
+                    <label class="form-label">Star Rating</label>
+                    <div id="starContainer">
+                        <span class="star-btn" data-value="1">★</span>
+                        <span class="star-btn" data-value="2">★</span>
+                        <span class="star-btn" data-value="3">★</span>
+                        <span class="star-btn" data-value="4">★</span>
+                        <span class="star-btn" data-value="5">★</span>
+                        <span id="ratingText" class="ms-2">0/5</span>
+                    </div>
+                </div>
 
-    <textarea name="review" required></textarea><br><br>
+                <div class="mb-3">
+                    <label for="reviewText" class="form-label">Review</label>
+                    <textarea id="reviewText" name="review" class="form-control" rows="5" minlength="20" required></textarea>
+                    <div class="form-text"><span id="charCount">0</span>/1000 characters</div>
+                </div>
 
-    <select name="rating">
-        <option>1</option>
-        <option>2</option>
-        <option>3</option>
-        <option>4</option>
-        <option>5</option>
-    </select><br><br>
+                <div class="mb-3">
+                    <label for="imageUpload" class="form-label">Upload Photo (optional)</label>
+                    <input id="imageUpload" name="image" type="file" class="form-control" accept="image/*">
+                    <div id="imagePreview" class="mt-2"></div>
+                </div>
 
-    <button type="submit">Submit</button>
-</form>
+                <div id="validationMessage" class="alert alert-danger" style="display:none;"></div>
 
+                <button type="submit" id="submitBtn" class="btn btn-primary">Submit Review</button>
+                <div id="loading" class="spinner-border text-primary ms-3" role="status" style="display:none;"><span class="visually-hidden">Loading...</span></div>
+                <div id="successMessage" class="alert alert-success mt-3" style="display:none;">Review submitted successfully. Redirecting to home...</div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+const stars = document.querySelectorAll('.star-btn');
+const ratingInput = document.getElementById('ratingInput');
+const ratingText = document.getElementById('ratingText');
+let selectedRating = 0;
+
+stars.forEach(star => {
+    star.addEventListener('mouseover', () => {
+        const value = parseInt(star.dataset.value);
+        stars.forEach(s => s.classList.toggle('hover', parseInt(s.dataset.value) <= value));
+    });
+    star.addEventListener('mouseout', () => {
+        stars.forEach(s => s.classList.remove('hover'));
+    });
+    star.addEventListener('click', () => {
+        selectedRating = parseInt(star.dataset.value);
+        ratingInput.value = selectedRating;
+        ratingText.textContent = `${selectedRating}/5`;
+        stars.forEach(s => s.classList.toggle('selected', parseInt(s.dataset.value) <= selectedRating));
+    });
+});
+
+const reviewText = document.getElementById('reviewText');
+const charCount = document.getElementById('charCount');
+reviewText.addEventListener('input', () => {
+    charCount.textContent = reviewText.value.length;
+});
+
+const imageUpload = document.getElementById('imageUpload');
+const imagePreview = document.getElementById('imagePreview');
+imageUpload.addEventListener('change', e => {
+    imagePreview.innerHTML = '';
+    const file = e.target.files[0];
+    if (file) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.style.maxWidth = '150px';
+        img.style.maxHeight = '150px';
+        img.style.objectFit = 'cover';
+        img.className = 'rounded';
+        imagePreview.appendChild(img);
+    }
+});
+
+const form = document.getElementById('reviewForm');
+form.addEventListener('submit', (e) => {
+    const validation = document.getElementById('validationMessage');
+    validation.style.display = 'none';
+
+    if (selectedRating === 0) {
+        e.preventDefault();
+        validation.textContent = 'Please select a star rating.';
+        validation.style.display = 'block';
+        return;
+    }
+    if (reviewText.value.trim().length < 20) {
+        e.preventDefault();
+        validation.textContent = 'Review must be at least 20 characters.';
+        validation.style.display = 'block';
+        return;
+    }
+
+    document.getElementById('submitBtn').disabled = true;
+    document.getElementById('loading').style.display = 'inline-block';
+    document.getElementById('successMessage').style.display = 'block';
+});
+</script>
 </body>
 </html>

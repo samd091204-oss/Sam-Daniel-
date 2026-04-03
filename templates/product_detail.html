@@ -1,37 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Product</title>
+    <title>{{ product.product_name }} - Details</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-
 <body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+    <div class="container">
+        <a class="navbar-brand" href="/">Ecommerce</a>
+        <div class="d-flex align-items-center">
+            {% if user %}
+                <span class="me-3">Welcome, {{ user.name }}</span>
+                <a class="btn btn-outline-secondary btn-sm" href="/logout">Logout</a>
+            {% else %}
+                <a class="btn btn-outline-primary btn-sm me-2" href="/login">Login</a>
+                <a class="btn btn-primary btn-sm" href="/register">Register</a>
+            {% endif %}
+        </div>
+    </div>
+</nav>
 
 <div class="container mt-4">
-
-    <div class="card p-4">
-        <h2>{{ product.product_name }}</h2>
-        <p>{{ product.category }}</p>
-        <h4>₹{{ product.price }}</h4>
-
-        <form action="/buy/{{ product.product_id }}" method="POST">
-            <button class="btn btn-warning">Buy Now</button>
-        </form>
+    <div class="row">
+        <div class="col-md-6">
+            <img src="{{ product.image_url }}" class="img-fluid rounded" alt="{{ product.product_name }}">
+        </div>
+        <div class="col-md-6">
+            <h2>{{ product.product_name }}</h2>
+            <p class="text-muted">{{ product.category }}</p>
+            <h3 class="text-success">₹{{ product.price }}</h3>
+            <p>{{ product.description }}</p>
+            <p>Rating: {{ '%.1f' | format(product.rating) }}/5 ({{ product.review_count }} reviews)</p>
+            <form action="/buy/{{ product.product_id }}" method="POST">
+                <button class="btn btn-warning btn-lg">Buy Now</button>
+            </form>
+        </div>
     </div>
 
-    <hr>
+    <hr class="my-4">
 
-    <h3>Reviews</h3>
-
+    <h4>Customer Reviews</h4>
     {% for r in reviews %}
-    <div class="card p-2 mt-2">
-        <p>{{ r.review_text }}</p>
-        <p>Rating: {{ r.rating }}</p>
-        <small>Trust: {{ r.trust_score }}</small>
+    <div class="card mb-3">
+        <div class="card-body">
+            <p>{{ r.review_text }}</p>
+            <p>Rating: {{ r.rating }} ⭐</p>
+            <p>Authenticity: <span class="text-{{ 'success' if r.authenticity == 'Genuine' else 'danger' }}">{{ r.authenticity }}</span></p>
+            <p>Image consistency: {{ r.image_consistency }}</p>
+            {% if r.image_url %}
+            <img src="{{ r.image_url }}" class="img-fluid" style="max-height: 200px; object-fit: cover;" alt="Review Image">
+            {% endif %}
+        </div>
     </div>
+    {% else %}
+    <p>No reviews yet. Be the first to review this product!</p>
     {% endfor %}
-
 </div>
-
 </body>
 </html>
