@@ -1,75 +1,100 @@
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from email.message import EmailMessage
 from db import get_db, init_db
 
-init_db()
+init_db()  # Ensure database is initialized
+
+
+# -------- EMAIL CONFIGURATION --------
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 465
+
+SMTP_USER = "samd091204@gmail.com"       # your Gmail
+SMTP_PASSWORD = "opfn qbts dfja igdl"      # Gmail App Password
+FROM_EMAIL = SMTP_USER
+# -------------------------------------
+
+
+def send_email(to_email, subject, body):
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = FROM_EMAIL
+    msg["To"] = to_email
+    msg.set_content(body)
+
+    try:
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT) as server:
+            server.login(SMTP_USER, SMTP_PASSWORD)
+            server.send_message(msg)
+
+        print(f"Email successfully sent to {to_email}")
+
+    except Exception as ex:
+        print(f"Failed to send email to {to_email}: {ex}")
 
 
 def send_review_links():
+
     db = get_db()
     cursor = db.cursor()
 
-    cursor.execute('''
+    query = """
         SELECT o.order_id, u.name, u.email, p.product_name, p.category, p.price
         FROM orders o
         JOIN users u ON o.user_id = u.user_id
         JOIN products p ON o.product_id = p.product_id
-        WHERE o.status = 'Delivered' AND o.review_email_sent = 0
-    ''')
+        WHERE o.status = 'Delivered' AND IFNULL(o.review_email_sent, 0) = 0
+    """
 
+    cursor.execute(query)
     orders = cursor.fetchall()
 
-    smtp_host = 'smtp.gmail.com'
-    smtp_port = 587
-    smtp_user = 'sam091204@gmail.com'
-    smtp_pass = 'opfn qbts dfja igdl'
-    from_email = 'sam091204@gmail.com'
+    print("Orders found:", len(orders))   # Debug line
 
-    for order_id, name, email, product_name, category, price in orders:
-        review_link = f'http://127.0.0.1:5000/review?order_id={order_id}'
-        subject = f'Review request for your recent purchase: {product_name}'
+    for order in orders:
+
+        order_id, customer_name, customer_email, product_name, product_category, product_price = order
+
+        review_link = f"http://127.0.0.1:5000/review?order_id={order_id}"
+
+        subject = f"Please review your purchase: {product_name}"
+
         body = f"""
-Hello {name},
+Hello {customer_name},
 
-Thank you for purchasing {product_name} ({category}) from our store.
-We would love your honest review. Please click the link below to share your feedback:
+Thank you for shopping with us!
+
+Product Details:
+Product: {product_name}
+Category: {product_category}
+Price: ₹{product_price}
+Order ID: {order_id}
+
+We would love to hear your feedback.
+
+Please click the link below to submit your review:
 
 {review_link}
 
-Your insights help us ensure product quality and improve service for all customers.
+Thank you for helping us improve!
 
-Product: {product_name}
-Category: {category}
-Price: ₹{price}
-Order ID: {order_id}
-
-Thank you,
-The Ecommerce Team
+Regards,
+E-Commerce Team
 """
 
-        try:
-            msg = MIMEMultipart()
-            msg['From'] = from_email
-            msg['To'] = email
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'plain'))
+        send_email(customer_email, subject, body)
 
-            with smtplib.SMTP(smtp_host, smtp_port) as server:
-                server.starttls()
-                server.login(smtp_user, smtp_pass)
-                server.sendmail(from_email, email, msg.as_string())
+        cursor.execute(
+            "UPDATE orders SET review_email_sent = 1 WHERE order_id = ?",
+            (order_id,)
+        )
 
-            print(f'Sent review email to {email}')
-
-            cursor.execute('UPDATE orders SET review_email_sent = 1 WHERE order_id = ?', (order_id,))
-            db.commit()
-        except Exception as e:
-            print('Failed to send email to', email, 'error:', e)
+    db.commit()
 
     cursor.close()
     db.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     send_review_links()
